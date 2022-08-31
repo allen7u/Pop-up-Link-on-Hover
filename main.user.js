@@ -11,122 +11,100 @@
 // ==/UserScript==
 
 (function() {
+
     'use strict';
 
-    function copy_links_on_this_page(){
+    var query_patterns_list =  [ 
+    'div div a',
+    'ul li a.title',
+    '.bili-video-card__info > div > a' 
+    ];
+    
+    createButton('URL on Hover','93%','90%',on_button_click)
 
-        // get queryselector from playlist_queryselector input value
-        // var playlist_queryselector = document.getElementById("playlist_queryselector").value;
-        var links = document.querySelectorAll( 'ul li a.title' );
-        // var links_text = '';
-        // var links_with_title = '';
-        for(var i=0;i<links.length;i++){
+    function on_button_click(e){
+        for ( var i = 0; i < query_patterns_list.length; i++ ) {
+            copy_links_on_this_page( query_patterns_list[i] );
+        }
+    }
 
-            console.log(links[i].href);
-            links[i].addEventListener('mouseenter', function(e) {
+    function copy_links_on_this_page( query ){
+        // bilibili playlist 
+        var link_node_list = document.querySelectorAll( query );
+        if( link_node_list.length == 0 ){
+            return;
+        }
+
+        var mouseX, mouseY;
+        // track mouse position for div creation 
+        document.addEventListener('mousemove', function(e) {                
+            mouseX = e.clientX
+            mouseY = e.clientY
+        }
+        , false);
+        for(var i=0;i<link_node_list.length;i++){
+
+            let div 
+            let div_creation_timer
+            let div_destory_timer
+            link_node_list[i].addEventListener('mouseenter', function(e) {
                 // get the link href
                 var href = e.target.href;
                 // create a new div
-                var div = document.createElement('div');
-                // set the div content to the link href
-                div.innerHTML = href;
-                // set the div style
-                div.style.position = 'fixed';
-                div.style.top = e.clientY + 'px';
-                div.style.left = e.clientX + 'px';
-                div.style.backgroundColor = '#fff';
-                div.style.border = '1px solid #000';
-                div.style.padding = '5px';
-                div.style.zIndex = '9999';
-                // add the div to the body
-                document.body.appendChild(div);
-
-                var timer
-                timer = setTimeout(function(){
-                    document.body.removeChild(div);
-                }
-                ,1000);
-
-                // delete timer on mouseenter the div
-                div.addEventListener('mouseenter', function(e) {
-                    clearTimeout(timer);
-                } , false);
-
-                // reset timer on mouseleave the div
-                div.addEventListener('mouseleave', function(e) {
-                    timer = setTimeout(function(){
-                        document.body.removeChild(div);
+                // create a new div 1s after the mouse enter the link
+                div_creation_timer = setTimeout(function(){
+                    if(div){
+                        div.remove();
                     }
-                    ,1000);
-                } , false);
-
-                // copy the link href to clipboard on click the div 
-                // and remove the div after
-                div.addEventListener('click', function(e) {
-                    copyToClipboard(href);
-                    document.body.removeChild(div);
-                } , false);                
-
+                    div = document.createElement('div');                    
+                    // set the div content to the link href
+                    div.innerHTML = href;
+                    // set the div style
+                    div.style.position = 'fixed';
+                    div.style.top = mouseY+ 5 +'px';
+                    div.style.left = mouseX+ 5 +'px';
+                    div.style.backgroundColor = '#fff';
+                    div.style.border = '1px solid #000';
+                    div.style.padding = '5px';
+                    div.style.zIndex = '99999';
+                    document.body.appendChild(div);
+                    // destroy the div after 1s, not recommanded since it's be there mouseleave the link
+                    // however, if you don't want the div to clutter some default popup, uncomment the following line
+                    // div_destory_timer = setTimeout(function(){
+                    //     document.body.removeChild(div);
+                    // },1000);
+                    // delete div_destory_timer on mouseenter the div
+                    div.addEventListener('mouseenter', function(e) {
+                        clearTimeout(div_destory_timer);
+                    } , false);
+                    // reset div_destory_timer on mouseleave the div
+                    div.addEventListener('mouseleave', function(e) {
+                        div_destory_timer = setTimeout(function(){
+                            document.body.removeChild(div);
+                        }
+                        ,300);
+                    } , false);
+                    // copy the link href to clipboard on click the div 
+                    // and remove the div after
+                    div.addEventListener('click', function(e) {
+                        copyToClipboard(href);
+                        // document.body.removeChild(div);
+                        div.remove();
+                    } , false); 
+                }, 300);
             } , false);
-
-            // links_text += links[i].href + '\n';
-            // links_with_title += '# '+links[i].innerText + '\n' + links[i].href + '\n';
-        }
-
-        if(false){
-            var combined_playlist = '\n#combined_playlist\n' + links_text + '\n' + links_with_title;
-
-        
-            var combined_playlist_and_search_results = 
-            title + '\n' + combined_playlist + '\n' + combined_search_results;
-            console.log(combined_playlist_and_search_results);
-    
-            // copy to clipboard
-            var copyText = document.createElement('textarea')
             
-            copyText.value = combined_playlist_and_search_results
-            document.body.appendChild(copyText)
-            copyText.select()
-            document.execCommand('copy')
-            document.body.removeChild(copyText)
-    
-    
-            // show pop up message
-            if (links.length > 0 || search_results.length > 0) {
-            var innerHTML =    'Copied to clipboard.<br><br>' +
-                    combined_playlist_and_search_results;
-            var res = pop_up_div( innerHTML, 3000 );
-            set_pop_up_div_style( res );
-            }
-        }
-
-    }
-
-    if(false){
-        // set default search results queryselector
-        var search_results_queryselector = '.bili-video-card__info > div > a';
-        var search_results_queryselector_input = createInput( '93%','30%','search_results_queryselector', search_results_queryselector);
-            // show tips on hover, and delete tips on mouseout
-        var tip_div_1
-        search_results_queryselector_input.addEventListener('mouseenter', function(){
-            tip_div_1 = pop_up_div( 'search_results_queryselector' )    
-            set_tip_div_style( tip_div_1 )    
-        });
-        search_results_queryselector_input.onmouseout = function(){
-            tip_div_1.remove();
-        }
-
-        // set default playlist queryselector
-        var playlist_queryselector = 'ul li a.title';
-        var playlist_queryselector_input = createInput( '93%','50%','playlist_queryselector', playlist_queryselector);
-            // show tips on hover, and delete tips on mouseout
-        var tip_div_2
-        playlist_queryselector_input.addEventListener('mouseenter', function(){
-            tip_div_2 = pop_up_div( 'playlist_queryselector' )    
-            set_tip_div_style( tip_div_2 )    
-        });
-        playlist_queryselector_input.onmouseout = function(){
-            tip_div_2.remove();
+            link_node_list[i].addEventListener('mouseleave', function(e) {                
+                if(div==undefined){
+                    // cancel div_creation_timer if it was not created yet
+                    clearTimeout(div_creation_timer);                    
+                }else{
+                    // or set div_destory_timer if it has been created, to allow mouseenter the div to cancel the timer
+                    div_destory_timer = setTimeout(function(){
+                        div.remove();
+                        },300);
+                }                
+            } , false);
         }
     }
 
@@ -148,52 +126,10 @@
     }
 
 
-    function createInput( left,top,id,value ){
-        var input = document.createElement('textarea');
-        // default value
-        input.value = value ? value : '';
-        input.id = id;
-        input.style.position = 'fixed';
-        input.style.zIndex = '9999';
-        input.draggable = 'true';
-        input.style.top = top;
-        input.style.left = left;
-        input.style.width = '90px';
-        input.style.height = '90px';
-        input.style.border = '1px solid #000';
-        input.style.borderRadius = '5px';
-        input.style.padding = '5px';
-        input.style.fontSize = '12px';
-        input.style.backgroundColor = '#fff';
-
-        document.body.appendChild(input);
-
-        var offSetX, offSetY
-        input.ondragstart = function(e){
-            let rect = e.target.getBoundingClientRect()
-            offSetX = e.clientX - rect.left
-            offSetY = e.clientY - rect.top
-        }
-        input.ondragend = function(e){
-            input.style.left = parseInt(e.clientX - offSetX)+'px'
-            input.style.top = parseInt(e.clientY	- offSetY)+'px'
-            console.log(e.clientX)
-            console.log(e.clientY)
-            console.log(parseInt(e.clientX - offSetX))
-            console.log(e.clientY - offSetY)
-        }
-
-        return input;
-    }
-
-
-
-    createButton('URL on Hover','93%','90%',copy_links_on_this_page)
-
-
-    function createButton( innerHTML,left,top,eventHandler ){
+    
+    function createButton( innerHTML,left, top, on_button_click ){
         var btn = document.createElement('button')
-        btn.addEventListener('click', eventHandler);
+        btn.addEventListener('click', on_button_click);
         btn.innerHTML = innerHTML;
         btn.draggable = 'true'
         btn.style.position = 'fixed';
@@ -226,94 +162,6 @@
 
         document.body.appendChild(btn);
     }
-
-
-
-    function pop_up_div( innerHTML, duration) {
-        var container = document.createElement('div');
-        var message = document.createElement('div');
-        message.innerHTML = innerHTML
-        // add br to separate lines
-        message.innerHTML = message.innerHTML.replace(/\n/g, '<br>');
-        // add class
-        // message.className = class_ ? class_ : 'message';
-        // message.style.position = 'fixed';
-        // message.style.top = '25vh';
-        // message.style.left = '25vw';
-        // message.style.width = '50vw';
-        // message.style.height = '75vh';
-        message.style.zIndex = '9000';
-        message.style.backgroundColor = '#fff';
-        message.style.borderRadius = '5px';
-        message.style.padding = '10px';
-        message.style.boxShadow = '0px 0px 10px #ccc';
-        message.style.fontSize = '16px';
-        message.style.overflow = 'auto';
-
-
-        container.appendChild(message);
-        document.body.appendChild(container);
-
-        if (duration) {
-        setTimeout(function () {
-            document.body.removeChild(container);
-        }, duration);
-        }
-
-        return container;
-    }
-
-    function set_tip_div_style(ele, style) {
-        ele.style.display = 'flex';
-        ele.style.position = 'fixed';
-        ele.style.top = '0vh';
-        ele.style.left = '0vw';
-        ele.style.width = '100vw';
-        ele.style.height = '100vh';
-        ele.style.zIndex = '9000';
-        ele.style.backgroundColor = 'rgba(0,0,0,0.1)';
-        ele.style.borderRadius = '5px';
-        ele.style.padding = '10px';
-        ele.style.boxShadow = '0px 0px 10px #ccc';
-        ele.style.fontSize = '16px';
-        ele.style.overflow = 'auto';
-        ele.style.justifyContent = 'center';
-        ele.style.alignItems = 'center';
-      }
-    
-    function set_pop_up_div_style(ele, style) {
-        ele.style.display = 'flex';
-        ele.style.flexDirection = 'column';
-        ele.style.position = 'fixed';
-        ele.style.top = '25vh';
-        ele.style.left = '25vw';
-        ele.style.width = '50vw';
-        ele.style.height = '75vh';
-        ele.style.zIndex = '9000';
-        ele.style.backgroundColor = 'rgba(0,0,0,0.1)';
-        ele.style.borderRadius = '5px';
-        ele.style.padding = '10px';
-        ele.style.boxShadow = '0px 0px 10px #ccc';
-        ele.style.fontSize = '16px';
-        ele.style.overflow = 'auto';
-        ele.style.justifyContent = 'start';
-        ele.style.alignItems = 'center';
-    }
-      
-        // {
-        //     position: fixed;
-        //     top: 0;
-        //     left: 0;
-        //     width: 100%;
-        //     height: 100%;
-        //     z-index: 9999;
-        //     background-color: rgba(0,0,0,0.5);
-        //     display: flex;
-        //     justify-content: center;
-        //     align-items: center;
-        // }
-
-
 
 })();
 
